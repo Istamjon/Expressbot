@@ -55,7 +55,7 @@ Bot guruhlarni zararli fayllar va havolalardan himoya qiladi.
 1️⃣ Botni guruhga qo'shing
 2️⃣ Botga admin huquqini bering
 3️⃣ Bot avtomatik .apk fayllarni o'chiradi va linklar uchun ogohlantiradi
-4️⃣ Admin egasi sozlamalarni o'zgartirishi mumkin
+ 
 
 <b>Mavjud buyruqlar:</b>
 /start - Botni ishga tushirish
