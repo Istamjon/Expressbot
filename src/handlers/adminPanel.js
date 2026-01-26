@@ -67,14 +67,14 @@ function getGroupSettingsKeyboard(chatId) {
     return {
         inline_keyboard: [
             [
-                { text: `APK: ${fileSt}`, callback_data: `toggle_file_${chatId}` },
+                { text: `Fayl: ${fileSt}`, callback_data: `toggle_file_${chatId}` },
                 { text: `Link: ${linkSt}`, callback_data: `toggle_link_${chatId}` }
             ],
             [
                 { text: `System Msg: ${sysSt}`, callback_data: `toggle_sys_${chatId}` }
             ],
             [
-                { text: '✏️ APK matn', callback_data: `edit_apk_${chatId}` },
+                { text: '✏️ Fayl matn', callback_data: `edit_apk_${chatId}` },
                 { text: '✏️ Link matn', callback_data: `edit_link_${chatId}` }
             ],
             [
@@ -205,7 +205,7 @@ Sozlash uchun guruhni tanlang:
             const newValue = await toggleSetting(targetChatId, 'fileFilterEnabled');
 
             await bot.answerCallbackQuery(query.id, {
-                text: `APK filtri: ${newValue ? '🟢 Yoqildi' : '🔴 O\'chirildi'}`
+                text: `Fayl filtri: ${newValue ? '🟢 Yoqildi' : '🔴 O\'chirildi'}`
             });
 
             // Refresh settings view
@@ -300,7 +300,7 @@ Sozlash uchun guruhni tanlang:
             });
 
             const message = `
-✏️ <b>APK ogohlantirish matnini o'zgartirish</b>
+✏️ <b>Fayl ogohlantirish matnini o'zgartirish</b>
 
 <b>Joriy matn:</b>
 <i>${settings.apkWarningMessage}</i>
@@ -464,7 +464,7 @@ Sozlashni boshlash uchun tugmalarni bosing:
 3️⃣ Tugmalarni bosib sozlamalarni o'zgartiring
 
 <b>Sozlamalar:</b>
-📁 <b>Fayl filter</b> - .apk fayllarni avtomatik o'chiradi
+📁 <b>Fayl filter</b> - .apk, .exe va boshqa xavfli fayllarni o'chiradi
 🔗 <b>Link warning</b> - havolalar haqida ogohlantiradi
 🗑 <b>System msg</b> - kirdi/chiqdi xabarlarini o'chiradi
 
@@ -577,7 +577,7 @@ async function handlePendingInput(bot, msg) {
         pendingInputs.delete(userId);
 
         await bot.sendMessage(msg.chat.id, `
-✅ <b>APK ogohlantirish matni yangilandi!</b>
+✅ <b>Fayl ogohlantirish matni yangilandi!</b>
 
 <b>Yangi matn:</b>
 <i>${newText}</i>

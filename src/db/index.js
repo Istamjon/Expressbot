@@ -32,7 +32,7 @@ async function initDatabase() {
                 file_filter_enabled BOOLEAN DEFAULT true,
                 link_warning_enabled BOOLEAN DEFAULT true,
                 system_message_delete_enabled BOOLEAN DEFAULT true,
-                apk_warning_message TEXT DEFAULT '<b>{fullname}</b> ushbu foydalanuvchi gruhga.apk fayl yubordi — bu virus bo''lishi mumkin! Agar tanisangiz, darhol ogohlantiring: ularning telefoniga virus tushgan bo''lishi ehtimoli bor. Telegram va qurilmasini tekshirsin!',
+                apk_warning_message TEXT DEFAULT '<b>{fullname}</b> ushbu foydalanuvchi guruhga xavfli fayl (.apk, .exe) yubordi! Agar tanisangiz, darhol ogohlantiring: ularning telefoniga virus tushgan bo''lishi ehtimoli bor. Telegram va qurilmasini tekshirsin!',
                 link_warning_message TEXT DEFAULT '<b>{fullname}</b> havolani yubordi. Ochishdan oldin ogoh bo''ling! Ehtimol virus bo''lishi mumkin.'
             );
         `);

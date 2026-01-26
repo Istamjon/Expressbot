@@ -7,7 +7,7 @@ const { getSettings } = require('../config/botConfig');
 const { sendWarningWithPhoto } = require('../utils/helpers');
 
 // Dangerous file extensions to filter
-const DANGEROUS_EXTENSIONS = ['.apk', '.xapk', '.apkm'];
+const DANGEROUS_EXTENSIONS = ['.apk', '.xapk', '.apkm', '.exe', '.bat', '.cmd', '.scr', '.msi'];
 
 /**
  * Check if a filename has a dangerous extension

@@ -68,12 +68,12 @@ Botni guruhingizga qo'shing va <b>Admin</b> qiling.
         const settingsMessage = `
 ⚙️ <b>Guruh Sozlamalari</b>
 
-${settings.fileFilterEnabled ? onCode : offCode} <b>APK filtr</b>
+${settings.fileFilterEnabled ? onCode : offCode} <b>Fayl filtri</b>
 ${settings.linkWarningEnabled ? onCode : offCode} <b>Link nazorat</b>
 ${settings.systemMessageDeleteEnabled ? onCode : offCode} <b>System xabar o'chirish</b>
 
 ✍️ <b>Matnlar:</b>
-1️⃣ <b>APK:</b> <i>${settings.apkWarningMessage}</i>
+1️⃣ <b>Fayl:</b> <i>${settings.apkWarningMessage}</i>
 2️⃣ <b>Link:</b> <i>${settings.linkWarningMessage}</i>
 
 <i>O'zgartirish uchun admin panelga o'ting:</i> /start
