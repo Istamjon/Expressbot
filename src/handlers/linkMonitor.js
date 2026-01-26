@@ -99,7 +99,7 @@ async function handleLinkMonitor(bot, msg) {
     }
 
     const chatId = msg.chat.id;
-    const settings = getSettings(chatId);
+    const settings = await getSettings(chatId);
 
     // Check if link warning is enabled
     if (!settings.linkWarningEnabled) {

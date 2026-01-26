@@ -1,10 +1,9 @@
 /**
  * Statistics Handler
- * Tracks member invitation statistics in memory
+ * Tracks member invitation statistics using PostgreSQL
  */
 
-// In-memory storage: Map<chatId, Map<userId, { count, username }>>
-const inviteStats = new Map();
+const { pool } = require('../db');
 
 /**
  * Get username or display name from a user object
@@ -24,32 +23,66 @@ function getUserDisplayName(user) {
  * @param {Object} inviter - User who invited (from message.from)
  * @param {number} count - Number of new members added
  */
-function trackInvitation(chatId, inviter, count = 1) {
-    if (!inviter || !inviter.id) return;
+/**
+ * Track new member invitations with unique referral check
+ * @param {number} chatId - Telegram chat ID
+ * @param {Object} inviter - User who invited
+ * @param {Array<Object>} newMembers - Array of new member objects
+ */
+async function trackInvitation(chatId, inviter, newMembers) {
+    if (!inviter || !inviter.id || !newMembers || newMembers.length === 0) return;
 
-    // Initialize chat stats if not exists
-    if (!inviteStats.has(chatId)) {
-        inviteStats.set(chatId, new Map());
+    const username = getUserDisplayName(inviter);
+    const firstName = inviter.first_name || '';
+    const lastName = inviter.last_name || '';
+    let validCount = 0;
+
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        for (const member of newMembers) {
+            // Skip self or bot
+            if (member.is_bot || member.id === inviter.id) continue;
+
+            // Try to record the referral (unique constraint ensures no duplicates)
+            const res = await client.query(
+                `INSERT INTO referrals (chat_id, sponsor_id, member_id)
+                 VALUES ($1, $2, $3)
+                 ON CONFLICT (chat_id, member_id) DO NOTHING`,
+                [chatId, inviter.id, member.id]
+            );
+
+            // If a row was inserted, it's a new unique invite
+            if (res.rowCount > 0) {
+                validCount++;
+            }
+        }
+
+        if (validCount > 0) {
+            await client.query(
+                `INSERT INTO invitations (chat_id, user_id, username, first_name, last_name, count, last_updated)
+                 VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                 ON CONFLICT (chat_id, user_id) 
+                 DO UPDATE SET 
+                 count = invitations.count + $6,
+                 username = $3,
+                 first_name = $4,
+                 last_name = $5,
+                 last_updated = NOW()`,
+                [chatId, inviter.id, username, firstName, lastName, validCount]
+            );
+            console.log(`[Statistics] ${username} (+${validCount}) unique referrals`);
+        }
+
+        await client.query('COMMIT');
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[Statistics] Error:', err);
+    } finally {
+        client.release();
     }
-
-    const chatStats = inviteStats.get(chatId);
-    const userId = inviter.id;
-
-    // Get or create user stats
-    const userStats = chatStats.get(userId) || {
-        count: 0,
-        username: getUserDisplayName(inviter),
-        firstName: inviter.first_name,
-        lastName: inviter.last_name || ''
-    };
-
-    // Update count
-    userStats.count += count;
-    userStats.username = getUserDisplayName(inviter); // Update username in case it changed
-
-    chatStats.set(userId, userStats);
-
-    console.log(`[Statistics] ${userStats.username} invited ${count} member(s) to chat ${chatId}. Total: ${userStats.count}`);
 }
 
 /**
@@ -58,37 +91,47 @@ function trackInvitation(chatId, inviter, count = 1) {
  * @param {number} limit - Number of top users to return
  * @returns {Array} Sorted array of { userId, username, count }
  */
-function getTopInviters(chatId, limit = 10) {
-    if (!inviteStats.has(chatId)) {
+async function getTopInviters(chatId, limit = 10) {
+    try {
+        const res = await pool.query(
+            `SELECT user_id, username, first_name, last_name, count 
+             FROM invitations 
+             WHERE chat_id = $1 
+             ORDER BY count DESC 
+             LIMIT $2`,
+            [chatId, limit]
+        );
+        return res.rows.map(row => ({
+            userId: row.user_id,
+            username: row.username,
+            firstName: row.first_name,
+            lastName: row.last_name,
+            count: row.count
+        }));
+    } catch (err) {
+        console.error('[Statistics] Failed to get top inviters:', err);
         return [];
     }
-
-    const chatStats = inviteStats.get(chatId);
-    const users = [];
-
-    for (const [userId, stats] of chatStats) {
-        users.push({
-            userId,
-            username: stats.username,
-            firstName: stats.firstName,
-            lastName: stats.lastName,
-            count: stats.count
-        });
-    }
-
-    // Sort by count descending
-    users.sort((a, b) => b.count - a.count);
-
-    return users.slice(0, limit);
 }
 
 /**
  * Reset statistics for a chat
  * @param {number} chatId - Telegram chat ID
  */
-function resetStats(chatId) {
-    inviteStats.delete(chatId);
-    console.log(`[Statistics] Stats reset for chat ${chatId}`);
+async function resetStats(chatId) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM invitations WHERE chat_id = $1', [chatId]);
+        await client.query('DELETE FROM referrals WHERE chat_id = $1', [chatId]);
+        await client.query('COMMIT');
+        console.log(`[Statistics] Stats reset for chat ${chatId}`);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[Statistics] Failed to reset stats:', err);
+    } finally {
+        client.release();
+    }
 }
 
 /**
@@ -96,22 +139,23 @@ function resetStats(chatId) {
  * @param {number} chatId - Telegram chat ID
  * @returns {Object} { totalInviters, totalInvited }
  */
-function getChatStats(chatId) {
-    if (!inviteStats.has(chatId)) {
+async function getChatStats(chatId) {
+    try {
+        const res = await pool.query(
+            `SELECT COUNT(user_id) as inviters, SUM(count) as total 
+             FROM invitations 
+             WHERE chat_id = $1`,
+            [chatId]
+        );
+
+        return {
+            totalInviters: parseInt(res.rows[0].inviters || 0),
+            totalInvited: parseInt(res.rows[0].total || 0)
+        };
+    } catch (err) {
+        console.error('[Statistics] Failed to get chat stats:', err);
         return { totalInviters: 0, totalInvited: 0 };
     }
-
-    const chatStats = inviteStats.get(chatId);
-    let totalInvited = 0;
-
-    for (const [, stats] of chatStats) {
-        totalInvited += stats.count;
-    }
-
-    return {
-        totalInviters: chatStats.size,
-        totalInvited
-    };
 }
 
 /**
@@ -121,54 +165,48 @@ function getChatStats(chatId) {
  */
 async function handleStatistics(bot, msg) {
     // Only process group/supergroup messages with new members
-    if (msg.chat.type !== 'group' && msg.chat.type !== 'supergroup') {
-        return;
-    }
-
-    if (!msg.new_chat_members || msg.new_chat_members.length === 0) {
-        return;
-    }
+    if (msg.chat.type !== 'group' && msg.chat.type !== 'supergroup') return;
+    if (!msg.new_chat_members || msg.new_chat_members.length === 0) return;
 
     const chatId = msg.chat.id;
     const inviter = msg.from;
 
     // Don't count if user added themselves (joined via link)
-    const selfJoin = msg.new_chat_members.some(member => member.id === inviter.id);
+    // Invites via link show user as inviter AND member
+    if (msg.new_chat_members.some(member => member.id === inviter.id)) return;
 
-    if (selfJoin && msg.new_chat_members.length === 1) {
-        // User joined themselves, don't track
-        return;
-    }
-
-    // Count only members added by someone else
-    const addedByOther = msg.new_chat_members.filter(member => member.id !== inviter.id);
-
-    if (addedByOther.length > 0) {
-        trackInvitation(chatId, inviter, addedByOther.length);
-    }
+    // Filter out bots logic if needed, but trackInvitation handles it
+    await trackInvitation(chatId, inviter, msg.new_chat_members);
 }
 
 /**
- * Format top inviters list as a message
+ * Format top inviters list as a message with premium UI
  * @param {number} chatId - Telegram chat ID
  * @returns {string} Formatted message
  */
-function formatTopInvitersMessage(chatId) {
-    const topInviters = getTopInviters(chatId, 10);
-    const chatStats = getChatStats(chatId);
+async function formatTopInvitersMessage(chatId) {
+    const topInviters = await getTopInviters(chatId, 10);
+    const chatStats = await getChatStats(chatId);
 
     if (topInviters.length === 0) {
-        return '📊 <b>Statistika</b>\n\nHozircha hech kim a\'zo qo\'shmadi.';
+        return '📉 <b>Reyting</b>\n\nHozircha ma\'lumot yo\'q. Do\'stlaringizni taklif qiling!';
     }
 
-    let message = '📊 <b>Eng ko\'p a\'zo qo\'shganlar</b>\n\n';
+    let message = '🏆 <b>FAOL A\'ZOLAR REYTINGI</b>\n\n';
+
+    const medals = ['🥇', '🥈', '🥉'];
 
     topInviters.forEach((user, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-        message += `${medal} ${user.username} — <b>${user.count}</b> ta a\'zo\n`;
+        let rank = medals[index] || `<b>${index + 1}.</b>`;
+        let name = user.username ? `@${user.username}` : user.firstName;
+        // Escape HTML in name
+        name = name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        message += `${rank} ${name} — <b>${user.count}</b>\n`;
     });
 
-    message += `\n📈 Jami: ${chatStats.totalInvited} ta a\'zo, ${chatStats.totalInviters} ta taklif qiluvchi`;
+    message += `\n──────────────\n`;
+    message += `👥 Jami takliflar: <b>${chatStats.totalInvited}</b>`;
 
     return message;
 }

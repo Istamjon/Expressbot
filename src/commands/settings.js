@@ -18,21 +18,18 @@ function registerSettingsCommands(bot) {
         const chatId = msg.chat.id;
 
         const welcomeMessage = `
-🤖 <b>Guruh Boshqaruv Boti</b>
+⚡️ <b>Bot ishga tushdi!</b>
 
-Ushbu bot guruhingizni boshqarishda yordam beradi:
+Men guruhlarni nazorat qiluvchi yordamchiman.
+Botni guruhingizga qo'shing va <b>Admin</b> qiling.
 
-📁 <b>Fayl filtrlash</b> - .apk, .xapk, .apkm fayllarini avtomatik o'chiradi
-🔗 <b>Link monitoring</b> - Havolalar haqida ogohlantiradi
-🗑 <b>Tizim xabarlari</b> - Kirdi/chiqdi xabarlarini o'chiradi
-📊 <b>Statistika</b> - Eng ko'p a'zo qo'shganlarni ko'rsatadi
+⚙️ <b>Imkoniyatlarim:</b>
+🚫 APK/EXE fayl filtri
+⚠️ Link va reklama nazorati
+🗑 Kirdi-chiqdi tozalash
+📊 Faol a'zolar reytingi
 
-<b>Buyruqlar:</b>
-/settings - Sozlamalarni ko'rish
-/topinviters - Statistika ko'rish
-/help - Yordam
-
-<i>Sozlamalarni faqat bot egasi o'zgartirishi mumkin.</i>
+<i>Sozlamalar uchun: /settings</i>
         `.trim();
 
         await bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'HTML' });
@@ -43,22 +40,18 @@ Ushbu bot guruhingizni boshqarishda yordam beradi:
         const chatId = msg.chat.id;
 
         const helpMessage = `
-📚 <b>Bot Buyruqlari</b>
+📚 <b>Qo'llanma</b>
 
-<b>Umumiy:</b>
-/start - Botni ishga tushirish
-/help - Ushbu yordam
-/settings - Joriy sozlamalar
-/topinviters - Statistika
+🔹 <b>Foydalanuvchilar uchun:</b>
+/topinviters - 🏆 Reyting jadvali
+/help - ❓ Yordam
 
-<b>Sozlamalar (faqat egasi):</b>
-/toggle_filefilter - Fayl filtrlash ON/OFF
-/toggle_linkwarning - Link ogohlantirish ON/OFF
-/toggle_systemmsg - Tizim xabarlari ON/OFF
-/set_apk_warning &lt;matn&gt; - APK ogohlantirish matni
-/set_link_warning &lt;matn&gt; - Link ogohlantirish matni
-/reset_settings - Sozlamalarni tiklash
-/reset_stats - Statistikani tozalash
+🔹 <b>Adminlar uchun:</b>
+/settings - ⚙️ Sozlamalar paneli
+/toggle_filefilter - 📁 Fayl filtr (ON/OFF)
+/toggle_linkwarning - 🔗 Link nazorat (ON/OFF)
+/toggle_systemmsg - 🗑 Tizim xabar (ON/OFF)
+/reset_settings - 🔄 Reset
         `.trim();
 
         await bot.sendMessage(chatId, helpMessage, { parse_mode: 'HTML' });
@@ -67,22 +60,23 @@ Ushbu bot guruhingizni boshqarishda yordam beradi:
     // /settings command
     bot.onText(/\/settings/, async (msg) => {
         const chatId = msg.chat.id;
-        const settings = getSettings(chatId);
+        const settings = await getSettings(chatId);
 
-        const statusEmoji = (enabled) => enabled ? '✅' : '❌';
+        const onCode = '🟢';
+        const offCode = '🔴';
 
         const settingsMessage = `
-⚙️ <b>Joriy Sozlamalar</b>
+⚙️ <b>Guruh Sozlamalari</b>
 
-${statusEmoji(settings.fileFilterEnabled)} Fayl filtrlash (.apk)
-${statusEmoji(settings.linkWarningEnabled)} Link ogohlantirish
-${statusEmoji(settings.systemMessageDeleteEnabled)} Tizim xabarlari o'chirish
+${settings.fileFilterEnabled ? onCode : offCode} <b>APK filtr</b>
+${settings.linkWarningEnabled ? onCode : offCode} <b>Link nazorat</b>
+${settings.systemMessageDeleteEnabled ? onCode : offCode} <b>System xabar o'chirish</b>
 
-<b>APK ogohlantirish matni:</b>
-<i>${settings.apkWarningMessage}</i>
+✍️ <b>Matnlar:</b>
+1️⃣ <b>APK:</b> <i>${settings.apkWarningMessage}</i>
+2️⃣ <b>Link:</b> <i>${settings.linkWarningMessage}</i>
 
-<b>Link ogohlantirish matni:</b>
-<i>${settings.linkWarningMessage}</i>
+<i>O'zgartirish uchun admin panelga o'ting:</i> /start
         `.trim();
 
         await bot.sendMessage(chatId, settingsMessage, { parse_mode: 'HTML' });
@@ -91,23 +85,29 @@ ${statusEmoji(settings.systemMessageDeleteEnabled)} Tizim xabarlari o'chirish
     // /topinviters command
     bot.onText(/\/topinviters/, async (msg) => {
         const chatId = msg.chat.id;
-        const message = formatTopInvitersMessage(chatId);
+        const message = await formatTopInvitersMessage(chatId);
         await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
     });
 
-    // /toggle_filefilter command (owner only)
+    // /toggle_filefilter command (owner only, private chat redirect)
     bot.onText(/\/toggle_filefilter/, async (msg) => {
         const chatId = msg.chat.id;
         const userId = msg.from.id;
 
-        if (!isBotOwner(userId)) {
-            await bot.sendMessage(chatId, '❌ Bu buyruqni faqat bot egasi ishlatishi mumkin.');
+        // Redirect to private admin panel if in group
+        if (msg.chat.type !== 'private') {
+            await bot.sendMessage(chatId, '⚙️ Sozlamalar faqat <b>shaxsiy yozishmada</b> (/admin) o\'zgartiriladi.', { parse_mode: 'HTML' });
             return;
         }
 
-        const newValue = toggleSetting(chatId, 'fileFilterEnabled');
-        const status = newValue ? '✅ YOQILDI' : '❌ O\'CHIRILDI';
-        await bot.sendMessage(chatId, `📁 Fayl filtrlash: ${status}`);
+        if (!isBotOwner(userId)) {
+            await bot.sendMessage(chatId, '⛔️ Siz admin emassiz.');
+            return;
+        }
+
+        const newValue = await toggleSetting(chatId, 'fileFilterEnabled');
+        const status = newValue ? '🟢 Yoqildi' : '🔴 O\'chirildi';
+        await bot.sendMessage(chatId, `📁 Fayl filtri: ${status}`);
     });
 
     // /toggle_linkwarning command (owner only)
@@ -116,13 +116,13 @@ ${statusEmoji(settings.systemMessageDeleteEnabled)} Tizim xabarlari o'chirish
         const userId = msg.from.id;
 
         if (!isBotOwner(userId)) {
-            await bot.sendMessage(chatId, '❌ Bu buyruqni faqat bot egasi ishlatishi mumkin.');
+            await bot.sendMessage(chatId, '⛔️ Siz admin emassiz.');
             return;
         }
 
-        const newValue = toggleSetting(chatId, 'linkWarningEnabled');
-        const status = newValue ? '✅ YOQILDI' : '❌ O\'CHIRILDI';
-        await bot.sendMessage(chatId, `🔗 Link ogohlantirish: ${status}`);
+        const newValue = await toggleSetting(chatId, 'linkWarningEnabled');
+        const status = newValue ? '🟢 Yoqildi' : '🔴 O\'chirildi';
+        await bot.sendMessage(chatId, `🔗 Link nazorat: ${status}`);
     });
 
     // /toggle_systemmsg command (owner only)
@@ -131,13 +131,13 @@ ${statusEmoji(settings.systemMessageDeleteEnabled)} Tizim xabarlari o'chirish
         const userId = msg.from.id;
 
         if (!isBotOwner(userId)) {
-            await bot.sendMessage(chatId, '❌ Bu buyruqni faqat bot egasi ishlatishi mumkin.');
+            await bot.sendMessage(chatId, '⛔️ Siz admin emassiz.');
             return;
         }
 
-        const newValue = toggleSetting(chatId, 'systemMessageDeleteEnabled');
-        const status = newValue ? '✅ YOQILDI' : '❌ O\'CHIRILDI';
-        await bot.sendMessage(chatId, `🗑 Tizim xabarlari o'chirish: ${status}`);
+        const newValue = await toggleSetting(chatId, 'systemMessageDeleteEnabled');
+        const status = newValue ? '🟢 Yoqildi' : '🔴 O\'chirildi';
+        await bot.sendMessage(chatId, `🗑 Tizim xabarlari: ${status}`);
     });
 
     // /set_apk_warning command (owner only)
@@ -146,13 +146,13 @@ ${statusEmoji(settings.systemMessageDeleteEnabled)} Tizim xabarlari o'chirish
         const userId = msg.from.id;
 
         if (!isBotOwner(userId)) {
-            await bot.sendMessage(chatId, '❌ Bu buyruqni faqat bot egasi ishlatishi mumkin.');
+            await bot.sendMessage(chatId, '⛔️ Siz admin emassiz.');
             return;
         }
 
         const newMessage = match[1].trim();
-        updateSetting(chatId, 'apkWarningMessage', newMessage);
-        await bot.sendMessage(chatId, `✅ APK ogohlantirish matni yangilandi:\n\n<i>${newMessage}</i>`, {
+        await updateSetting(chatId, 'apkWarningMessage', newMessage);
+        await bot.sendMessage(chatId, `✅ <b>APK matni yangilandi:</b>\n\n"${newMessage}"`, {
             parse_mode: 'HTML'
         });
     });
@@ -163,13 +163,13 @@ ${statusEmoji(settings.systemMessageDeleteEnabled)} Tizim xabarlari o'chirish
         const userId = msg.from.id;
 
         if (!isBotOwner(userId)) {
-            await bot.sendMessage(chatId, '❌ Bu buyruqni faqat bot egasi ishlatishi mumkin.');
+            await bot.sendMessage(chatId, '⛔️ Siz admin emassiz.');
             return;
         }
 
         const newMessage = match[1].trim();
-        updateSetting(chatId, 'linkWarningMessage', newMessage);
-        await bot.sendMessage(chatId, `✅ Link ogohlantirish matni yangilandi:\n\n<i>${newMessage}</i>`, {
+        await updateSetting(chatId, 'linkWarningMessage', newMessage);
+        await bot.sendMessage(chatId, `✅ <b>Link matni yangilandi:</b>\n\n"${newMessage}"`, {
             parse_mode: 'HTML'
         });
     });
@@ -180,12 +180,12 @@ ${statusEmoji(settings.systemMessageDeleteEnabled)} Tizim xabarlari o'chirish
         const userId = msg.from.id;
 
         if (!isBotOwner(userId)) {
-            await bot.sendMessage(chatId, '❌ Bu buyruqni faqat bot egasi ishlatishi mumkin.');
+            await bot.sendMessage(chatId, '⛔️ Siz admin emassiz.');
             return;
         }
 
-        resetSettings(chatId);
-        await bot.sendMessage(chatId, '✅ Sozlamalar boshlang\'ich holatga qaytarildi.');
+        await resetSettings(chatId);
+        await bot.sendMessage(chatId, '🔄 Sozlamalar qayta tiklandi.');
     });
 
     // /reset_stats command (owner only)
@@ -194,12 +194,12 @@ ${statusEmoji(settings.systemMessageDeleteEnabled)} Tizim xabarlari o'chirish
         const userId = msg.from.id;
 
         if (!isBotOwner(userId)) {
-            await bot.sendMessage(chatId, '❌ Bu buyruqni faqat bot egasi ishlatishi mumkin.');
+            await bot.sendMessage(chatId, '⛔️ Siz admin emassiz.');
             return;
         }
 
-        resetStats(chatId);
-        await bot.sendMessage(chatId, '✅ Statistika tozalandi.');
+        await resetStats(chatId);
+        await bot.sendMessage(chatId, '🗑 Statistika tozalandi.');
     });
 
     console.log('[Settings] All commands registered');

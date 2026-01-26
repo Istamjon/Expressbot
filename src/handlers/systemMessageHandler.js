@@ -64,7 +64,7 @@ async function handleSystemMessage(bot, msg) {
     }
 
     const chatId = msg.chat.id;
-    const settings = getSettings(chatId);
+    const settings = await getSettings(chatId);
 
     // Check if system message deletion is enabled
     if (!settings.systemMessageDeleteEnabled) {

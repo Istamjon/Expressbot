@@ -1,0 +1,45 @@
+
+
+services:
+  bot:
+    build: .
+    container_name: telegram-group-bot
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=secretpassword
+      - DB_NAME=telegram_bot_db
+      - DB_PORT=5432
+      # Enviroment variables from .env file should be passed here or loaded via env_file
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    networks:
+      - bot-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: bot-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secretpassword
+      - POSTGRES_DB=telegram_bot_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bot-network
+
+networks:
+  bot-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

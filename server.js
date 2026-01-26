@@ -8,6 +8,7 @@ require('dotenv').config();
 
 const express = require('express');
 const { initializeBot, stopBot } = require('./src/bot');
+const { initDatabase } = require('./src/db');
 
 // Initialize Express app
 const app = express();
@@ -16,43 +17,21 @@ const PORT = process.env.PORT || 3000;
 // Parse JSON bodies
 app.use(express.json());
 
-// Health check endpoint
-app.get('/', (req, res) => {
-    res.json({
-        status: 'running',
-        name: 'Telegram Group Bot',
-        version: '1.0.0',
-        uptime: process.uptime()
-    });
-});
-
-// Health check endpoint for monitoring
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString()
-    });
-});
-
-// Bot status endpoint
-app.get('/status', (req, res) => {
-    res.json({
-        bot: 'active',
-        mode: 'polling',
-        owner_configured: !!process.env.OWNER_ID
-    });
-});
+// ... code ...
 
 // Initialize bot
 let bot = null;
 
-try {
-    bot = initializeBot();
-    console.log('[Server] Bot initialized successfully');
-} catch (error) {
-    console.error('[Server] Failed to initialize bot:', error.message);
-    process.exit(1);
-}
+(async () => {
+    try {
+        await initDatabase();
+        bot = initializeBot();
+        console.log('[Server] Bot initialized successfully');
+    } catch (error) {
+        console.error('[Server] Failed to initialize bot/database:', error);
+        process.exit(1);
+    }
+})();
 
 // Start Express server
 const server = app.listen(PORT, () => {

@@ -42,7 +42,7 @@ async function handleFileFilter(bot, msg) {
     }
 
     const chatId = msg.chat.id;
-    const settings = getSettings(chatId);
+    const settings = await getSettings(chatId);
 
     // Check if file filter is enabled
     if (!settings.fileFilterEnabled) {
