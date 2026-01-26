@@ -570,30 +570,23 @@ async function handlePendingInput(bot, msg) {
     }
 
     const { type, targetChatId } = pending;
-    const newText = msg.text;
 
-    if (type === 'apk_message') {
-        await updateSetting(targetChatId, 'apkWarningMessage', newText);
+    // For warning messages, only accept text
+    if (type === 'apk_message' || type === 'link_message') {
+        if (!msg.text) {
+            await bot.sendMessage(msg.chat.id, '⚠️ Iltimos, faqat matn ko\'rinishidagi xabar yuboring.');
+            return true;
+        }
+
+        const newText = msg.text;
+        const settingKey = type === 'apk_message' ? 'apkWarningMessage' : 'linkWarningMessage';
+        const label = type === 'apk_message' ? 'Fayl' : 'Link';
+
+        await updateSetting(targetChatId, settingKey, newText);
         pendingInputs.delete(userId);
 
         await bot.sendMessage(msg.chat.id, `
-✅ <b>Fayl ogohlantirish matni yangilandi!</b>
-
-<b>Yangi matn:</b>
-<i>${newText}</i>
-        `.trim(), {
-            parse_mode: 'HTML',
-            reply_markup: await getGroupSettingsKeyboard(targetChatId)
-        });
-        return true;
-    }
-
-    if (type === 'link_message') {
-        await updateSetting(targetChatId, 'linkWarningMessage', newText);
-        pendingInputs.delete(userId);
-
-        await bot.sendMessage(msg.chat.id, `
-✅ <b>Link ogohlantirish matni yangilandi!</b>
+✅ <b>${label} ogohlantirish matni yangilandi!</b>
 
 <b>Yangi matn:</b>
 <i>${newText}</i>
@@ -637,30 +630,56 @@ async function handlePendingInput(bot, msg) {
                     console.error(`[Broadcast] Failed to get member count for ${groupInfo.title}`);
                 }
 
-                // Forward text, photo, video, document etc.
+                let sent = false;
+
+                // Send different message types
                 if (msg.photo) {
                     await bot.sendPhoto(groupChatId, msg.photo[msg.photo.length - 1].file_id, {
                         caption: msg.caption || '',
                         parse_mode: 'HTML'
                     });
+                    sent = true;
                 } else if (msg.video) {
                     await bot.sendVideo(groupChatId, msg.video.file_id, {
                         caption: msg.caption || '',
                         parse_mode: 'HTML'
                     });
+                    sent = true;
+                } else if (msg.animation) {
+                    await bot.sendAnimation(groupChatId, msg.animation.file_id, {
+                        caption: msg.caption || '',
+                        parse_mode: 'HTML'
+                    });
+                    sent = true;
+                } else if (msg.voice) {
+                    await bot.sendVoice(groupChatId, msg.voice.file_id, {
+                        caption: msg.caption || '',
+                        parse_mode: 'HTML'
+                    });
+                    sent = true;
                 } else if (msg.document) {
                     await bot.sendDocument(groupChatId, msg.document.file_id, {
                         caption: msg.caption || '',
                         parse_mode: 'HTML'
                     });
+                    sent = true;
+                } else if (msg.sticker) {
+                    await bot.sendSticker(groupChatId, msg.sticker.file_id);
+                    sent = true;
                 } else if (msg.text) {
                     await bot.sendMessage(groupChatId, msg.text, {
                         parse_mode: 'HTML'
                     });
+                    sent = true;
                 }
 
-                successCount++;
-                console.log(`[Broadcast] Sent to ${groupInfo.title}`);
+                if (sent) {
+                    successCount++;
+                    console.log(`[Broadcast] Sent to ${groupInfo.title}`);
+                } else {
+                    failCount++;
+                    errors.push(`${groupInfo.title}: Qo'llab-quvvatlanmaydigan xabar turi`);
+                }
             } catch (error) {
                 failCount++;
                 errors.push(`${groupInfo.title}: ${error.message}`);

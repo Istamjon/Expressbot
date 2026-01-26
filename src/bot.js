@@ -10,7 +10,7 @@ const { handleFileFilter } = require('./handlers/fileFilter');
 const { handleSystemMessage } = require('./handlers/systemMessageHandler');
 const { handleLinkMonitor } = require('./handlers/linkMonitor');
 const { handleStatistics } = require('./handlers/statistics');
-const { handleAdminCommand, handleCallbackQuery, handlePendingInput } = require('./handlers/adminPanel');
+const { handleAdminCommand, handleCallbackQuery, handlePendingInput, hasPendingInput } = require('./handlers/adminPanel');
 
 // Import config
 const { registerGroup, unregisterGroup } = require('./config/botConfig');
@@ -71,8 +71,9 @@ function initializeBot() {
     // Main message handler
     bot.on('message', async (msg) => {
         try {
-            // Handle pending text input for admin panel (private chat)
-            if (msg.chat.type === 'private' && msg.text && !msg.text.startsWith('/')) {
+            // Handle pending input for admin panel (private chat)
+            // Accepts text, photo, video etc. but skips commands
+            if (msg.chat.type === 'private' && !msg.text?.startsWith('/') && hasPendingInput(msg.from.id)) {
                 const handled = await handlePendingInput(bot, msg);
                 if (handled) return;
             }
