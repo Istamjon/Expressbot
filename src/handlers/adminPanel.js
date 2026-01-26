@@ -29,8 +29,8 @@ function getMainPanelKeyboard() {
  * Generate groups list keyboard
  * @returns {Object} Inline keyboard markup
  */
-function getGroupsKeyboard() {
-    const groups = getRegisteredGroups();
+async function getGroupsKeyboard() {
+    const groups = await getRegisteredGroups();
     const keyboard = [];
 
     if (groups.size === 0) {
@@ -53,8 +53,8 @@ function getGroupsKeyboard() {
  * @param {number} chatId - Group chat ID
  * @returns {Object} Inline keyboard markup
  */
-function getGroupSettingsKeyboard(chatId) {
-    const settings = getSettings(chatId);
+async function getGroupSettingsKeyboard(chatId) {
+    const settings = await getSettings(chatId);
 
     // Status icons
     const on = '🟢';

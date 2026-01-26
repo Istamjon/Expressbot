@@ -106,6 +106,17 @@ async function handleLinkMonitor(bot, msg) {
         return;
     }
 
+    // Skip messages from bots (including this bot's own messages)
+    if (msg.from && msg.from.is_bot) {
+        return;
+    }
+
+    // Skip commands (messages starting with /)
+    const text = msg.text || msg.caption || '';
+    if (text.startsWith('/')) {
+        return;
+    }
+
     // Detect links in message
     const { hasLink, linkTypes } = detectLinks(msg);
 
