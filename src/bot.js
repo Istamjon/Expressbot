@@ -59,51 +59,6 @@ function initializeBot() {
         }
     });
 
-    // Help message for groups
-    const groupHelpMessage = `🤖 <b>Xush kelibsiz!</b>
-
-Bot guruhlarni zararli fayllar va havolalardan himoya qiladi.
-
-<b>Mavjud buyruqlar:</b>
-/settings - Sozlamalarni ko'rish
-/topinviters - Statistika
-
-<b>Admin panel:</b>
-Bot egasi menga private xabar yuborib /admin buyrug'i orqali sozlamalarni boshqarishi mumkin.`;
-
-    // Help message for private
-    const privateHelpMessage = `🤖 <b>Xush kelibsiz!</b>
-
-Bot guruhlarni zararli fayllar va havolalardan himoya qiladi.
-
-<b>Botni ishlatish uchun:</b>
-1️⃣ Botni guruhga qo'shing
-2️⃣ Botga admin huquqini bering
-3️⃣ Bot avtomatik .apk fayllarni o'chiradi
-
-<b>Admin panel:</b>
-/admin - Sozlamalarni boshqarish (faqat bot egasi)`;
-
-    // /start command handler
-    bot.onText(/\/start/, async (msg) => {
-        try {
-            const helpMessage = msg.chat.type === 'private' ? privateHelpMessage : groupHelpMessage;
-            await bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'HTML' });
-        } catch (error) {
-            console.error('[Bot] Start command error:', error.message);
-        }
-    });
-
-    // /help command handler
-    bot.onText(/\/help/, async (msg) => {
-        try {
-            const helpMessage = msg.chat.type === 'private' ? privateHelpMessage : groupHelpMessage;
-            await bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'HTML' });
-        } catch (error) {
-            console.error('[Bot] Help command error:', error.message);
-        }
-    });
-
     // Callback query handler for inline buttons
     bot.on('callback_query', async (query) => {
         try {
@@ -127,7 +82,7 @@ Bot guruhlarni zararli fayllar va havolalardan himoya qiladi.
                 const botInfo = await bot.getMe();
                 const botWasAdded = msg.new_chat_members.some(member => member.id === botInfo.id);
                 if (botWasAdded && (msg.chat.type === 'group' || msg.chat.type === 'supergroup')) {
-                    registerGroup(msg.chat.id, msg.chat.title);
+                    await registerGroup(msg.chat.id, msg.chat.title);
                 }
             }
 
@@ -135,7 +90,7 @@ Bot guruhlarni zararli fayllar va havolalardan himoya qiladi.
             if (msg.left_chat_member) {
                 const botInfo = await bot.getMe();
                 if (msg.left_chat_member.id === botInfo.id) {
-                    unregisterGroup(msg.chat.id);
+                    await unregisterGroup(msg.chat.id);
                 }
             }
 
