@@ -54,7 +54,7 @@ npm start
 | `/start` | Welcome and feature list | All |
 | `/help` | Bot usage guide | All |
 | `/settings` | Current group settings (read-only) | Group |
-| `/topinviters` | Invitation leaderboard | Group |
+| `/top` | Invitation leaderboard | Group |
 | `/admin` | Open Admin Panel | **Owner (Private Only)** |
 
 ## 📂 Project Structure

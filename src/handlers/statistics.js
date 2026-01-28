@@ -192,15 +192,15 @@ async function formatTopInvitersMessage(chatId) {
         return '📉 <b>Reyting</b>\n\nHozircha ma\'lumot yo\'q. Do\'stlaringizni taklif qiling!';
     }
 
-    let message = '🏆 <b>FAOL A\'ZOLAR REYTINGI</b>\n\n';
+    let message = '🏆 <b>Eng kup ruhga odam qushgan foydalanuvchilar</b>\n\n';
 
     const medals = ['🥇', '🥈', '🥉'];
 
     topInviters.forEach((user, index) => {
         let rank = medals[index] || `<b>${index + 1}.</b>`;
-        let name = user.username ? `@${user.username}` : user.firstName;
+        let name = user.username ? (user.username.startsWith('@') ? user.username : `@${user.username}`) : user.firstName;
         // Escape HTML in name
-        name = name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (name) name = name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
         message += `${rank} ${name} — <b>${user.count}</b>\n`;
     });

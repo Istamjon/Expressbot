@@ -26,7 +26,7 @@ Botni guruhingizga qo'shing va <b>Admin</b> qiling.
 🚫 Xavfli fayllarni filtrlash
 ⚠️ Havolalar nazorati
 🗑 Kirdi-chiqdi tozalash
-📊 Faol a'zolar reytingi
+📊 Eng ko'p odam qo'shganlar reytingi
 
 <i>Sozlamalar uchun: /admin (shaxsiy chatda)</i>
         `.trim();
@@ -42,7 +42,7 @@ Botni guruhingizga qo'shing va <b>Admin</b> qiling.
 📚 <b>Qo'llanma</b>
 
 <b>Mavjud buyruqlar:</b>
-/topinviters - 🏆 Reyting jadvali
+/top - 🏆Eng kup odam qushganlar jadvali
 /settings - ⚙️ Joriy sozlamalar
 /help - ❓ Ushbu yordam
 
@@ -78,8 +78,8 @@ ${settings.systemMessageDeleteEnabled ? onCode : offCode} <b>System xabar o'chir
         await bot.sendMessage(chatId, settingsMessage, { parse_mode: 'HTML' });
     });
 
-    // /topinviters command
-    bot.onText(/\/topinviters/, async (msg) => {
+    // /top command
+    bot.onText(/\/top/, async (msg) => {
         const chatId = msg.chat.id;
         const message = await formatTopInvitersMessage(chatId);
         await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
